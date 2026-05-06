@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     upload_expiry_seconds: int = 900
 
     # Admin authentication
-    admin_token: str = "change-me-admin-token"
+    admin_token: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

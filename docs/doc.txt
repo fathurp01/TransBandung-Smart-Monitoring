@@ -1,0 +1,253 @@
+BAB 3
+LANGKAH PENGERJAAN
+3.0.	Prasyarat Wajib Sebelum Setup
+Agar proses deployment berjalan lancar dan dapat direplikasi, siapkan kebutuhan minimum berikut sebelum masuk ke tahap 3.1:
+•	Akun AWS aktif dengan hak akses untuk VPC, RDS, S3, ECS, ECR, IAM, CloudWatch, dan Secrets Manager 
+•	Akun GitHub dengan akses ke repositori TransBandung-Smart-Monitoring 
+•	Docker Desktop terpasang dan dapat menjalankan perintah docker compose 
+•	AWS CLI terpasang (opsional untuk verifikasi manual) 
+•	Domain/subdomain aktif untuk CDN Cloudflare (contoh: cdn.tbsm.com) 
+•	Daftar variabel konfigurasi sudah disiapkan: AWS_REGION, nama bucket S3, endpoint RDS, dan domain CDN 
+
+Parameter standar yang direkomendasikan pada proyek ini:
+•	Region: ap-southeast-1 
+•	Port backend: 8000, port frontend: 80 
+•	Branch deployment: main 
+•	Nama ECR: tbsm-backend dan tbsm-frontend 
+•	Nama ECS Cluster/Service: tbsm-cluster / tbsm-backend-service 
+
+3.1.	 Persiapan Aplikasi (Containerization & Local Test)
+Tahap awal pengerjaan dimulai dengan standarisasi lingkungan aplikasi menggunakan Docker agar proses deployment ke Amazon ECS berjalan konsisten dan bebas dari kendala perbedaan dependensi.
+3.1.1.	Pengaturan Struktur Proyek
+Langkah pertama adalah mengatur hierarki folder agar mendukung arsitektur microservices sederhana, di mana frontend dan backend memiliki lingkungan yang terisolasi.
+Langkah-langkah:
+•	Membuat folder utama proyek UTS2-CLOUD 
+•	Memisahkan kode sumber ke dalam folder backend/ untuk API berbasis FastAPI dan frontend/ untuk antarmuka berbasis React (Vite) 
+•	Menyiapkan folder .github/workflows/ untuk menyimpan konfigurasi otomatisasi CI/CD 
+Untuk memperjelas struktur proyek yang telah disusun, berikut ditampilkan tampilan direktori aplikasi pada Visual Studio Code.
+ 
+Gambar 3.1 Struktur Direkrori Projek TBSM
+Gambar 3.1 di atas menunjukkan struktur folder aplikasi TBSM yang sudah terorganisir. Struktur ini memudahkan sistem GitHub Actions dalam mendeteksi perubahan pada bagian spesifik aplikasi untuk kemudian di-build menjadi kontainer secara terpisah.
+
+3.1.2.	Dockerization Backend (FastAPI)
+Langkah selanjutnya adalah mendefinisikan instruksi pembangunan image kontainer untuk layanan backend agar siap dijalankan sebagai Task di Amazon ECS.
+Langkah-langkah:
+•	Membuat file Dockerfile di dalam direktori backend/ 
+•	Menggunakan base image python:3.11-slim untuk meminimalkan ukuran kontainer 
+•	Menentukan port ekspos di port 8000 sesuai dengan konfigurasi Application Load Balancer (ALB) nantinya 
+Untuk memperjelas konfigurasi yang digunakan dalam proses dockerization backend, berikut ditampilkan isi file Dockerfile.
+ 
+Gambar 3.2 Konfigurasi File Docker Backend
+File Dockerfile pada gambar 3.2 di atas berfungsi sebagai cetak biru untuk menciptakan lingkungan eksekusi Python yang identik antara komputer lokal dan server AWS. Dengan ini, poin penilaian mengenai penggunaan Docker (bobot 15%) dapat terpenuhi secara maksimal.
+
+3.1.3.	Dockerization Frontend (React & Nginx)
+Untuk layanan frontend, aplikasi harus dibungkus sedemikian rupa agar file statis dapat disajikan secara efisien.
+Langkah-langkah:
+•	Menggunakan teknik multi-stage build untuk memisahkan proses kompilasi kode React dan penyajian file statis 
+•	Tahap pertama melakukan build menggunakan Node.js untuk menghasilkan folder dist/ 
+•	Tahap kedua menggunakan web server Nginx untuk melayani file statis tersebut pada port 80 
+Untuk memperjelas konfigurasi yang digunakan dalam proses dockerization frontend, berikut ditampilkan isi file Dockerfile.
+ 
+Gambar 3.3 Konfigurasi File Docker Frontend
+Penerapan multi-stage build pada gambar 3.3 tersebut bertujuan untuk menghasilkan image yang ringan dan cepat saat di-pull oleh Amazon ECS, sehingga proses scaling aplikasi menjadi lebih responsif.
+
+3.1.4.	Konfigurasi Workflow CI/CD (GitHub Actions)
+Otomatisasi pada proyek ini menggunakan tiga workflow terpisah agar quality gate dan deployment berjalan terstruktur.
+•	Workflow 1 (Backend CI): .github/workflows/backend-ci.yml 
+•	Trigger: push/pull_request pada perubahan folder backend 
+•	Proses: setup Python 3.11 → install dependencies → pytest 
+•	Workflow 2 (Frontend CI): .github/workflows/frontend-ci.yml 
+•	Trigger: push/pull_request pada perubahan folder frontend 
+•	Proses: setup Node.js 20 → npm install → npm run build 
+•	Workflow 3 (Deployment): .github/workflows/deploy-ecr-ecs.yml 
+•	Trigger: push ke branch main 
+•	Proses: login AWS/ECR → build & push image backend+frontend ke ECR (tag SHA dan latest) → render task definition → deploy ke ECS service 
+Dengan skema ini, proses CI (uji backend/build frontend) terpisah dari CD (deploy ke AWS), sehingga troubleshooting lebih mudah dan risiko deploy aplikasi rusak dapat ditekan.
+
+[PLACEHOLDER: Screenshot 3A - Workflow Backend CI]
+Instruksi Capture:
+Capture isi backend-ci.yml yang menampilkan setup-python, install dependencies, dan pytest.
+
+[PLACEHOLDER: Screenshot 3B - Workflow Frontend CI]
+Instruksi Capture:
+Capture isi frontend-ci.yml yang menampilkan setup-node, npm install, dan npm run build.
+
+[PLACEHOLDER: Screenshot 3C - Workflow Deploy ECS]
+Instruksi Capture:
+Capture bagian jobs: deploy di deploy-ecr-ecs.yml yang menunjukkan amazon-ecr-login dan aws-actions/amazon-ecs-deploy-task-definition.
+
+Rangkaian workflow di atas menunjukkan implementasi CI/CD yang lengkap dari validasi kode hingga deployment otomatis.
+
+3.1.5.	Penyusunan AWS Task Definition (ECS Instruction)
+Sebagai pengganti konfigurasi manual di EC2, sistem menggunakan task-definition.json sebagai panduan bagi Amazon ECS untuk menjalankan kontainer.
+•	Komponen: Menentukan kebutuhan CPU/RAM, pemetaan port, dan integrasi log ke CloudWatch 
+•	Secrets: Mengambil kredensial RDS dan ADMIN_TOKEN dari Secrets Manager (bukan hardcoded), sedangkan domain CDN diset melalui environment variable 
+•	Konfigurasi runtime utama: networkMode awsvpc, requiresCompatibilities FARGATE, cpu 256, memory 512 
+•	Container utama: backend-container pada port 8000 dengan health check endpoint /api/health 
+•	Observability: log driver awslogs ke log group /ecs/tbsm-backend 
+•	Catatan implementasi: task definition yang dideploy saat ini berfokus pada service backend; image frontend tetap dibangun dan dipush ke ECR oleh workflow deploy 
+Untuk memberikan gambaran konfigurasi yang digunakan oleh ECS dalam menjalankan container, berikut ditampilkan isi file task definition.
+
+[PLACEHOLDER: Screenshot 4 - File task-definition.json]
+Instruksi Capture:
+Capture bagian requiresCompatibilities/networkMode/cpu/memory, containerDefinitions (image, portMappings, healthCheck), environment, secrets, dan logConfiguration.
+
+File ini merupakan instruksi krusial yang memastikan container service di AWS dapat menarik image yang benar dari ECR dan terhubung ke database privat.
+
+3.1.6.	Uji Coba Integrasi Lokal (Docker Compose)
+Sebelum melakukan deployment ke infrastruktur cloud, integrasi antar layanan (Frontend-Backend-Database) diuji menggunakan Docker Compose.
+Langkah-langkah:
+•	Menyusun file docker-compose.yml untuk menghubungkan frontend dengan backend secara internal 
+•	Mendefinisikan network agar kontainer dapat saling mengenali menggunakan nama layanan 
+•	Menyiapkan variabel lingkungan (env_file) untuk simulasi koneksi ke RDS secara lokal 
+Untuk menunjukkan proses integrasi layanan yang dilakukan secara lokal, berikut ditampilkan konfigurasi Docker Compose beserta hasil eksekusinya pada terminal.
+ 
+ 
+Gambar 3.4 konfigurasi Docker Compose dan hasil eksekusi
+Gambar 3.4 di atas membuktikan bahwa seluruh komponen aplikasi TBSM telah berhasil diintegrasikan dalam ekosistem kontainer. Keberhasilan uji coba lokal ini menjadi jaminan bahwa aplikasi akan berjalan stabil saat nantinya di-deploy ke Amazon ECS.
+
+3.2.	Setup Bagian 1: Repositori dan Source Code Management (GitHub)
+Sebelum masuk ke infrastruktur cloud, seluruh kode program harus tersentralisasi untuk mendukung alur otomatisasi.
+Langkah-langkah:
+•	Inisialisasi Git pada folder proyek lokal 
+•	Gunakan repositori GitHub dengan nama TransBandung-Smart-Monitoring 
+•	Unggah seluruh source code (Backend, Frontend, Dockerfile, dan Workflow) menggunakan perintah git push 
+•	Konfigurasi GitHub Secrets dengan memasukkan AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, dan AWS_REGION agar CI/CD dapat berkomunikasi dengan AWS 
+•	Pastikan branch default adalah main karena workflow deploy dipicu dari push ke branch main 
+
+
+[PLACEHOLDER: Screenshot Struktur File di GitHub & Daftar Secrets]
+Instruksi Capture: Ambil tangkapan layar halaman utama repositori GitHub Anda dan halaman Settings > Secrets > Actions yang menunjukkan daftar variabel rahasia yang telah diisi.
+
+Gambar 3.5 Struktur File Projek dan Daftar Secrets
+Gambar 3.1 di atas menunjukkan bahwa seluruh kode sumber telah tersimpan dengan aman di GitHub, siap untuk dipicu oleh pipeline otomatisasi deployment.
+
+3.3 Setup Bagian 2: Rekayasa Jaringan (VPC & Subnet)
+Membangun isolasi jaringan virtual untuk memisahkan komponen publik dan privat sesuai standar keamanan SC3.
+Langkah-langkah:
+•	Buka AWS Console, pilih layanan VPC 
+•	Buat VPC baru dengan CIDR block 10.0.0.0/16 
+•	Buat 2 Public Subnet untuk Application Load Balancer (ALB) dan ECS Tasks 
+•	Buat 2 Private Subnet khusus untuk lokasi Amazon RDS 
+•	Pasang Internet Gateway (IGW) dan hubungkan ke VPC 
+•	Atur Route Table untuk Subnet Publik agar memiliki rute 0.0.0.0/0 menuju IGW 
+•	Siapkan Security Group terpisah: SG-ALB, SG-ECS, dan SG-RDS untuk menerapkan prinsip least privilege 
+•	Atur rule minimum: SG-ALB membuka 80/443 dari internet, SG-ECS menerima trafik hanya dari SG-ALB, SG-RDS menerima trafik hanya dari SG-ECS 
+[PLACEHOLDER: Screenshot Peta Subnet di VPC Dashboard]
+Instruksi Capture:
+Ambil gambar dari menu Subnets yang memperlihatkan daftar subnet publik dan privat lengkap dengan ketersediaan di zona yang berbeda (Multi-AZ).
+Tangkapan layar di atas membuktikan bahwa struktur jaringan telah memenuhi kriteria tugas, di mana terdapat pemisahan akses yang jelas antara layanan publik dan basis data.
+________________________________________
+3.4 Setup Bagian 3: Basis Data Relasional (Amazon RDS)
+Menyediakan penyimpanan data yang aman di dalam jaringan privat.
+Langkah-langkah:
+•	Pilih layanan RDS, buat Subnet Group yang hanya berisi subnet privat yang telah dibuat 
+•	Buat database (PostgreSQL/MySQL) dengan opsi Public Access: No 
+•	Konfigurasi Security Group RDS agar hanya menerima koneksi dari Security Group aplikasi (ECS) pada port database yang sesuai 
+•	Simpan endpoint database untuk digunakan sebagai variabel lingkungan aplikasi 
+•	Aktifkan backup otomatis (minimal 7 hari) agar ada mekanisme pemulihan data 
+[PLACEHOLDER: Screenshot Detail Instance RDS & Security Group]
+Instruksi Capture:
+Ambil gambar detail instance RDS yang menunjukkan status Public Accessibility: No dan aturan Inbound Rules pada Security Group-nya.
+Melalui konfigurasi ini, database RDS terlindungi sepenuhnya dari serangan luar karena hanya dapat diakses oleh aplikasi internal di dalam VPC.
+________________________________________
+3.5 Setup Bagian 4: Penyimpanan Objek (Amazon S3)
+Menyiapkan storage untuk file bukti foto laporan masyarakat.
+Langkah-langkah:
+•	Buat bucket S3 (misal: tbsm-evidence-bucket) 
+•	Aktifkan fitur Block all public access secara total 
+•	Pastikan fitur CORS (Cross-Origin Resource Sharing) dikonfigurasi agar mengizinkan metode PUT dan GET dari domain aplikasi 
+•	Aktifkan default encryption (SSE-S3/SSE-KMS) untuk melindungi data saat tersimpan 
+•	Opsional: Tambahkan lifecycle rule untuk transisi atau penghapusan objek lama sesuai kebijakan retensi 
+[PLACEHOLDER: Screenshot Pengaturan Permissions S3 Bucket]
+Instruksi Capture:
+Capture bagian Permissions pada bucket S3 yang menunjukkan bahwa semua akses publik telah diblokir.
+Langkah ini menjamin bahwa data foto laporan tersimpan secara privat dan tidak dapat diakses sembarangan tanpa melalui jalur CDN.
+________________________________________
+3.6 Setup Bagian 5: CDN Terintegrasi (Cloudflare)
+Menggantikan Amazon CloudFront dengan Cloudflare untuk distribusi konten statis dari S3.
+Catatan: Penggunaan Cloudflare sebagai substitusi CloudFront dilakukan berdasarkan arahan dosen karena kendala penggunaan CloudFront, dan harus dilampirkan buktinya pada bagian lampiran laporan.
+Langkah-langkah:
+•	Daftarkan domain aplikasi di Cloudflare 
+•	Buat rekor DNS tipe CNAME yang mengarah ke endpoint S3 bucket Anda 
+•	Aktifkan fitur Proxy (Orange Cloud) pada Cloudflare agar IP asli S3 tersembunyi 
+•	Di sisi S3, tambahkan Bucket Policy yang memberikan izin s3:GetObject hanya kepada rentang IP Cloudflare agar keamanan tetap terjaga 
+•	Ubah URL akses foto di frontend aplikasi menjadi domain Cloudflare (misal: https://cdn.tbsm.com/file.jpg) 
+•	Catatan implementasi: variabel runtime masih bernama CLOUDFRONT_DOMAIN, tetapi nilainya diisi domain Cloudflare/CDN aktif 
+[PLACEHOLDER: Screenshot Dashboard DNS Cloudflare & S3 Bucket Policy IP]
+Instruksi Capture:
+Ambil tangkapan layar menu DNS di Cloudflare yang menunjukkan CNAME S3 dan cuplikan Bucket Policy di S3 yang membatasi akses berdasarkan IP Cloudflare.
+Gambar di atas menunjukkan implementasi CDN pihak ketiga yang berhasil mengamankan S3 sekaligus mempercepat pengiriman konten statis ke pengguna.
+________________________________________
+3.7 Setup Bagian 6: Registri Kontainer (Amazon ECR)
+Menyiapkan tempat penyimpanan image aplikasi yang akan digunakan oleh ECS.
+Langkah-langkah:
+•	Buat repositori privat di Amazon ECR untuk backend dan frontend 
+•	Verifikasi repositori tersebut dapat menerima push image dari GitHub Actions 
+[PLACEHOLDER: Screenshot Repositori ECR dengan Image List]
+Instruksi Capture:
+Ambil gambar daftar image di dalam ECR yang menunjukkan tag latest dan ukuran image yang efisien.
+Penyimpanan image di ECR memudahkan proses deployment ulang secara otomatis setiap kali ada pembaruan kode di GitHub.
+________________________________________
+3.8 Setup Bagian 7: Orkestrasi dan Deployment (Amazon ECS)
+Menjalankan container Docker melalui layanan khusus AWS untuk mendapatkan nilai maksimal.
+Langkah-langkah:
+•	Buat ECS Cluster 
+•	Susun Task Definition dengan memasukkan image URI dari ECR dan mengatur alokasi CPU/RAM 
+•	Buat ECS Service yang dijalankan di subnet publik atau privat (menggunakan NAT Gateway) 
+•	Hubungkan aplikasi dengan Application Load Balancer agar dapat diakses melalui satu alamat DNS publik 
+•	Gunakan ECS Task Execution Role yang memiliki izin pull image ECR, akses CloudWatch Logs, dan baca secret dari Secrets Manager 
+•	Verifikasi health check endpoint backend (/api/health) menghasilkan status sehat agar target group ALB tetap healthy 
+[PLACEHOLDER: Screenshot Status Service ECS & Target Group ALB]
+Instruksi Capture:
+Capture status Service: ACTIVE pada ECS dan status Healthy pada Target Group Load Balancer.
+Gambar tersebut membuktikan bahwa aplikasi telah berjalan secara terorkestrasi dan siap melayani trafik dari pengguna secara publik.
+________________________________________
+3.9 Setup Bagian 8: Otomatisasi CI/CD (GitHub Actions)
+Langkah terakhir untuk memastikan poin CI/CD terpenuhi secara optimal.
+Langkah-langkah:
+•	Aktifkan file workflow .github/workflows/deploy-ecr-ecs.yml 
+•	Pastikan alur Build, Push to ECR, dan Deploy to ECS berjalan tanpa hambatan 
+•	Lakukan uji coba dengan mengubah sedikit tampilan frontend dan pastikan perubahan tersebut otomatis ter-deploy ke AWS 
+[PLACEHOLDER: Screenshot Pipeline GitHub Actions yang Berhasil]
+Instruksi Capture:
+Ambil tangkapan layar tab Actions di GitHub yang menunjukkan seluruh tahap (job) berwarna hijau tanda berhasil.
+Seluruh tahapan di atas memastikan bahwa aplikasi TBSM telah memenuhi syarat teknis evaluasi, mulai dari infrastruktur jaringan hingga distribusi konten melalui CDN Cloudflare.
+
+3.10 Validasi Akhir End-to-End (Wajib Sebelum Pengumpulan)
+Bagian ini memastikan deployment tidak hanya sukses di pipeline, tetapi benar-benar berfungsi dari sisi pengguna hingga penyimpanan data.
+Checklist validasi:
+•	Akses endpoint aplikasi melalui DNS ALB berhasil tanpa error 5xx 
+•	Endpoint backend /api/health mengembalikan status sehat 
+•	Fitur upload bukti laporan menghasilkan presigned URL dan file masuk ke bucket S3 
+•	URL file bukti dapat diakses melalui domain CDN (Cloudflare) yang sudah diproksi 
+•	Service ECS berstatus ACTIVE dan task terbaru menggunakan image tag commit terbaru (SHA) 
+•	Log CloudWatch tidak menunjukkan error berulang (crash loop/connection refused) 
+•	RDS tetap private (Public Access: No) dan koneksi hanya dari SG-ECS 
+
+3.11 Troubleshooting Ringkas
+Jika deployment gagal, lakukan pemeriksaan berurutan berikut:
+•	GitHub Actions gagal pada login ECR: cek AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION pada GitHub Secrets 
+•	Build image gagal: cek Dockerfile backend/frontend, dependency lock, dan path build context 
+•	ECS service tidak stabil: cek CloudWatch Logs dan pastikan environment/secrets wajib (DATABASE_URL, DB_PASSWORD, ADMIN_TOKEN) terbaca benar 
+•	Target group ALB unhealthy: cek port container (8000), path health check (/api/health), dan Security Group antar komponen 
+•	Upload S3 gagal: cek IAM permission task role, CORS bucket, dan nama bucket pada variabel runtime 
+•	File tidak tampil via CDN: cek record DNS Cloudflare, status proxy, serta kebijakan akses bucket S3 
+
+3.12 Checklist Lampiran Bukti Penilaian
+Agar laporan siap dinilai tanpa revisi besar, lampirkan bukti minimum berikut:
+•	Struktur direktori proyek di VS Code 
+•	Dockerfile backend dan frontend 
+•	Workflow deploy-ecr-ecs.yml (jobs.deploy) 
+•	Task definition ECS (containerDefinitions + secrets) 
+•	VPC dengan public/private subnet multi-AZ 
+•	RDS private + inbound rule dari SG-ECS saja 
+•	S3 Block Public Access + CORS + enkripsi 
+•	Cloudflare DNS CNAME + bukti kebijakan akses S3 
+•	ECR image list (tag latest dan SHA) 
+•	ECS Service ACTIVE + target group healthy 
+•	GitHub Actions run hijau (berhasil) 
+•	Bukti persetujuan dosen terkait substitusi CloudFront menjadi Cloudflare 
+
+
+

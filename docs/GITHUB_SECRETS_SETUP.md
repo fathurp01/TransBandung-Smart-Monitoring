@@ -32,9 +32,9 @@ aws sts get-caller-identity --query Account --output text
 
 ---
 
-## Langkah 3: Setup Terraform Backend (S3 bucket untuk tfstate)
+## Langkah 3: Setup S3 Bucket untuk Evidence Storage
 
-1. **Buat S3 bucket** untuk Terraform state (pastikan unique name globally):
+1. **Buat S3 bucket** untuk evidence storage (pastikan unique name globally):
 ```bash
 aws s3 mb s3://tbsm-terraform-state-$(aws sts get-caller-identity --query Account --output text) \
   --region ap-southeast-1
@@ -48,18 +48,7 @@ aws s3 mb s3://tbsm-terraform-state-$(aws sts get-caller-identity --query Accoun
    - Encryption: Enable (default)
    - Create
 
-3. Update `infrastructure/terraform/main.tf` (add backend block):
-```hcl
-terraform {
-  backend "s3" {
-    bucket         = "tbsm-terraform-state-{ACCOUNT_ID}"
-    key            = "prod/terraform.tfstate"
-    region         = "ap-southeast-1"
-    encrypt        = true
-    dynamodb_table = "terraform-locks"  # opsional
-  }
-}
-```
+3. Simpan bucket name ini untuk `S3_BUCKET` dan CloudFront origin.
 
 ---
 
@@ -77,7 +66,7 @@ terraform {
 | `AWS_SECRET_ACCESS_KEY` | (dari step 1) | Secret Access Key (hati-hati, jangan biarkan exposed) |
 | `AWS_REGION` | `ap-southeast-1` | Atau region pilihan kamu |
 | `AWS_ACCOUNT_ID` | `123456789012` | Account ID AWS kamu |
-| `TF_BACKEND_BUCKET` | `tbsm-terraform-state-123456789012` | S3 bucket dari step 3 |
+| `TF_BACKEND_BUCKET` | `tbsm-evidence-123456789012` | S3 bucket evidence |
 | `DB_PASSWORD` | (kamu set saat RDS creation) | Master password RDS (atau ambil dari RDS parameter group) |
 
 ### Cara input secret di GitHub:
@@ -105,29 +94,12 @@ Ulangi untuk semua 6 secrets di atas.
 
 ### Opsi A: Manual Deploy (rekomendasi untuk v1)
 
-1. Local machine, di folder `infrastructure/terraform`:
+1. Local machine, siapkan file `.aws/task-definition.json` dan AWS Console resources:
 ```bash
-# Copy example file & edit dengan value kamu
-cp terraform.tfvars.example terraform.tfvars
-
-# Edit terraform.tfvars dengan editor:
-# - aws_region = "ap-southeast-1"
-# - db_password = "YourSecurePassword123!"
-# - project_name = "tbsm"
-
-# Init & plan
-terraform init \
-  -backend-config="bucket=tbsm-terraform-state-{ACCOUNT_ID}" \
-  -backend-config="key=prod/terraform.tfstate" \
-  -backend-config="region=ap-southeast-1"
-
-terraform plan -var-file=terraform.tfvars
-
-# Apply (create resources)
-terraform apply -var-file=terraform.tfvars
+echo "Create VPC, RDS, ALB, ECR, S3, and CloudFront manually"
 ```
 
-2. Setelah apply, catat output:
+2. Setelah resource dibuat, catat:
    - RDS endpoint
    - S3 bucket name
    - CloudFront domain
@@ -142,11 +114,8 @@ git commit -m "Add Terraform for AWS infra"
 git push origin main
 ```
 
-2. Klik **Actions** tab di GitHub → Pilih **Terraform Plan** workflow
-3. Klik **Run workflow** → `branch: main` → **Run workflow**
-4. Wait untuk `terraform plan` output
-5. Review output di logs
-6. Jika OK, bisa run **Terraform Apply** workflow (buat workflow baru untuk apply, atau manual via CLI)
+2. Klik **Actions** tab di GitHub → workflow deployment aplikasi
+3. Workflow akan build/push image lalu update ECS service
 
 ---
 
@@ -204,7 +173,7 @@ git push origin main
 - Check IAM user permissions (harus attach policies untuk ECR, ECS, S3)
 
 ### Error: "Repository does not exist"
-- ECR repository belum dibuat (buat via Terraform dulu atau AWS Console)
+- ECR repository belum dibuat (buat via AWS Console dulu)
 - Atau repository name tidak match di workflow (`ECR_REPOSITORY_BACKEND` = `tbsm-backend`)
 
 ### Error: "AccessDenied" untuk S3 / ECS

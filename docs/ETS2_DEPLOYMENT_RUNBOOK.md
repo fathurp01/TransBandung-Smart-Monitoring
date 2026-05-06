@@ -1,6 +1,6 @@
 # ETS2 Deployment Runbook — Step-by-Step Guide untuk Hari Evaluasi
 
-**Tujuan**: Quick reference guide untuk deploy aplikasi TBSM ke AWS pada hari ETS2 evaluation. Dokumen ini mengasumsikan semua prerequisites (IAM, GitHub Secrets, Terraform) sudah setup per GITHUB_SECRETS_SETUP.md dan TERRAFORM_ECS_SETUP.md.
+**Tujuan**: Quick reference guide untuk deploy aplikasi TBSM ke AWS pada hari ETS2 evaluation. Dokumen ini mengasumsikan semua prerequisites (IAM, GitHub Secrets, AWS Console resources) sudah setup per GITHUB_SECRETS_SETUP.md dan SECRETS_MANAGER_SETUP.md.
 
 **Estimated Duration**: 30-45 minutes (sekali jalan)
 
@@ -13,112 +13,34 @@
 - [ ] GitHub repository cloned locally: `git clone <repo-url>`
 - [ ] AWS CLI installed dan configured: `aws --version` dan `aws sts get-caller-identity`
 - [ ] Docker installed (untuk test build images locally): `docker --version`
-- [ ] Terraform installed: `terraform --version`
 - [ ] All source code pushed to GitHub main branch
 
 ---
 
-## Phase 1: Infrastructure Provisioning dengan Terraform (15 minutes)
+## Phase 1: Infrastructure Provisioning Manual di AWS Console (15 minutes)
 
-### Step 1.1: Prepare Terraform Variables
-
-```bash
-cd infrastructure/terraform
-
-# Create terraform.tfvars dari template
-cp terraform.tfvars.example terraform.tfvars
-
-# Edit terraform.tfvars dengan actual values:
-# - aws_region: ap-southeast-1
-# - project_name: tbsm
-# - vpc_cidr: 10.0.0.0/16
-# - db_name: tbsm_db
-# - db_username: tbsm_admin
-# - db_password: (masukkan password secure)
-
-nano terraform.tfvars  # atau editor yang preferred
-```
-
-**Expected content**:
-```hcl
-aws_region     = "ap-southeast-1"
-project_name   = "tbsm"
-vpc_cidr       = "10.0.0.0/16"
-db_name        = "tbsm_db"
-db_username    = "tbsm_admin"
-db_password    = "YourSecurePassword123!@#"
-```
-
-### Step 1.2: Initialize Terraform
+### Step 1.1: Create Core AWS Resources Manually
 
 ```bash
-terraform init -upgrade
-
-# Expected output:
-# Initializing the backend...
-# Successfully configured the backend "s3"!
-# Initializing provider plugins...
-# Terraform has been successfully initialized!
+echo "Create VPC, subnets, RDS, ALB, ECR, S3, and CloudFront manually in AWS Console"
 ```
 
-### Step 1.3: Validate Terraform Configuration
+### Step 1.2: Verify Resources Created
 
 ```bash
-terraform validate
-
-# Expected output:
-# Success! The configuration is valid.
+aws sts get-caller-identity
 ```
 
-### Step 1.4: Plan Resources
+### Step 1.3: Capture Resource Details
 
 ```bash
-terraform plan -var-file=terraform.tfvars -out=tfplan
-
-# Review output:
-# Plan: XX to add, 0 to change, 0 to destroy.
-# 
-# Check untuk key resources:
-# - VPC (1)
-# - Subnets (2)
-# - Internet Gateway (1)
-# - NAT Gateway (1)
-# - RDS PostgreSQL (1)
-# - ECS Cluster (1)
-# - ECS Service (1)
-# - ECR Repositories (2)
-# - ALB (1)
-# - S3 Bucket (1)
-# - CloudFront Distribution (1)
-# - Security Groups (3)
-# - IAM Roles (2)
+echo "Record RDS endpoint, ALB DNS, S3 bucket name, CloudFront domain, and ECR repository URLs"
 ```
 
-### Step 1.5: Apply Terraform Configuration
+**CATAT details di atas** — akan dipakai di step berikutnya.
 
 ```bash
-terraform apply tfplan
-
-# Process akan memakan 15-20 minutes (banyak resources)
-# Expected output:
-# 
-# Apply complete! Resources: XX added, 0 changed, 0 destroyed.
-# 
-# Outputs:
-# alb_dns_name = "tbsm-alb-123456.ap-southeast-1.elb.amazonaws.com"
-# alb_url = "http://tbsm-alb-123456.ap-southeast-1.elb.amazonaws.com"
-# cloudfront_domain = "dXXXXXXXXXXXXXX.cloudfront.net"
-# rds_endpoint = "tbsm-db.c123def456.ap-southeast-1.rds.amazonaws.com:5432"
-# s3_bucket_name = "tbsm-evidence-123456789"
-# ecs_service_name = "tbsm-backend-service"
-```
-
-**CATAT outputs di atas** — akan dipakai di step berikutnya.
-
-### Step 1.6: Verify Resources Created di AWS Console
-
-```bash
-# Atau gunakan AWS CLI untuk verify
+# Use AWS CLI or AWS Console to verify
 
 # Check RDS instance
 aws rds describe-db-instances --db-instance-identifier tbsm-db --region ap-southeast-1
@@ -176,16 +98,13 @@ aws secretsmanager get-secret-value \
 
 Terraform sudah create task definition template di `.aws/task-definition.json`. Update placeholder values:
 
-### Step 3.1: Get Actual Values dari Terraform Output
+### Step 3.1: Get Actual Values dari AWS Console
 
 ```bash
-cd infrastructure/terraform
-
-# Extract values
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 AWS_REGION="ap-southeast-1"
-S3_BUCKET=$(terraform output -raw s3_bucket_name)
-CLOUDFRONT_DOMAIN=$(terraform output -raw cloudfront_domain)
+S3_BUCKET="tbsm-evidence-${ACCOUNT_ID}"
+CLOUDFRONT_DOMAIN="dXXXXXXXXXXXXXX.cloudfront.net"
 
 echo "Account ID: $ACCOUNT_ID"
 echo "S3 Bucket: $S3_BUCKET"
@@ -199,15 +118,7 @@ Replace placeholders:
 ```bash
 cd /path/to/project
 
-# Using sed (Linux/Mac)
-sed -i "s/ACCOUNT_ID/$ACCOUNT_ID/g" .aws/task-definition.json
-sed -i "s/REGION/$AWS_REGION/g" .aws/task-definition.json
-sed -i "s|S3_BUCKET|$S3_BUCKET|g" .aws/task-definition.json
-sed -i "s|CLOUDFRONT_DOMAIN|$CLOUDFRONT_DOMAIN|g" .aws/task-definition.json
-
-# Verify (check file)
-cat .aws/task-definition.json | grep -E "ACCOUNT_ID|REGION|S3_BUCKET|CLOUDFRONT_DOMAIN"
-# Should output: (blank = no placeholders left)
+# Replace the placeholders in .aws/task-definition.json with the values above.
 ```
 
 ---
@@ -536,8 +447,8 @@ aws ecs describe-services \
 ## Quick Reference — Important Commands
 
 ```bash
-# Get ALB URL
-ALB_URL=$(terraform output -raw alb_url)
+# Get ALB URL from AWS Console and echo it here
+ALB_URL="http://<ALB_DNS>"
 echo $ALB_URL
 
 # Test health
@@ -554,7 +465,7 @@ aws logs tail /ecs/tbsm-backend --follow --region ap-southeast-1
 gh run list --limit 1
 
 # Clean up (after ETS2, optional)
-terraform destroy -var-file=terraform.tfvars
+echo "Remove resources manually from AWS Console when no longer needed"
 ```
 
 ---

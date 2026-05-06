@@ -39,7 +39,7 @@ export default function EvidenceUpload({ reports, onUploaded }) {
           File Gambar
           <input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} required />
         </label>
-        <button type="submit" disabled={loading}>{loading ? "Uploading..." : "Upload ke S3"}</button>
+        <button type="submit" disabled={loading}>{loading ? "Uploading..." : "Upload Bukti"}</button>
       </form>
     </section>
   );

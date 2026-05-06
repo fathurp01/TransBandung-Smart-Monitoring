@@ -111,22 +111,14 @@
 - [ ] Report table `status` field support pending/verified/resolved/dismissed
 - [ ] Foreign key constraints sudah di-define
 
-### Terraform & IaC
-- [ ] `infrastructure/terraform/main.tf` include:
-  - [ ] VPC creation ✓
-  - [ ] Public & Private subnets ✓
-  - [ ] Security groups (ALB, ECS, RDS) ✓
-  - [ ] RDS PostgreSQL ✓
-  - [ ] S3 bucket + CloudFront ✓
-  - [ ] ECR repositories ✓
-  - [ ] ECS cluster ✓
-- [ ] `infrastructure/terraform/variables.tf` expose semua config parameter
-- [ ] `infrastructure/terraform/outputs.tf` output:
-  - RDS endpoint
-  - S3 bucket name
-  - CloudFront domain
-  - ECR repository URLs
-- [ ] `terraform plan` berjalan tanpa error (gunakan `.example` tfvars untuk dry run)
+### Manual AWS Infrastructure
+- [ ] VPC dibuat manual di AWS Console
+- [ ] Public & Private subnets dibuat manual
+- [ ] Security groups (ALB, ECS, RDS) dibuat manual
+- [ ] RDS PostgreSQL dibuat manual
+- [ ] S3 bucket + CloudFront dibuat manual
+- [ ] ECR repositories dibuat manual
+- [ ] ECS cluster dibuat manual
 - [ ] Semua resources sudah di-tag dengan `project_name = "tbsm"`
 
 ---
@@ -202,9 +194,8 @@
 ## ✓ Checklist Deployment (ETS2 Day)
 
 - [ ] AWS credentials sudah di-set di GitHub Secrets
-- [ ] Terraform state backend sudah di-configure (S3 bucket opsional untuk v1)
-- [ ] Run `terraform plan` dengan correct tfvars → no errors
-- [ ] Run `terraform apply` (atau via GitHub Actions) → resources created
+- [ ] AWS Console resources sudah lengkap dan tervalidasi
+- [ ] RDS, ALB, ECS, S3, CloudFront, ECR sudah hidup
 - [ ] Push code ke `main` branch → GitHub Actions trigger automatically
 - [ ] Wait for CI/CD pipeline → images pushed to ECR ✓
 - [ ] ECS service updated → new tasks running ✓
@@ -223,7 +214,7 @@
 1. [ ] Code reviewed: no typos, imports correct, no debug statements
 2. [ ] All tests passed locally
 3. [ ] Docker images build & run successfully
-4. [ ] Terraform dry-run (`terraform plan`) shows expected resources
+4. [ ] Manual AWS resources shows expected architecture
 5. [ ] GitHub Secrets all filled in & not exposed in code
 6. [ ] README & SPECIFICATION complete & clear
 7. [ ] Diagram dibuat manual (draw.io), bukan pakai AI

@@ -1,0 +1,182 @@
+Gemini
+Konversi Dokumen Ujian ke Format TXT
+New chat
+My stuff
+Notebooks
+
+Fundamental Structure and Mathematical Modeling of Neural Networks
+
+Mastering Missing Value Imputation and Data Preprocessing Mechanisms
+New notebook
+Gems
+
+Career guide
+Chats
+Pembuatan Dataset SIMAD
+Pinned chat
+journal Aksara VGG16
+Pinned chat
+Latihan Tinjauan Tenses Bahasa Inggris
+Pinned chat
+ptu
+Pinned chat
+Diskusi Aplikasi Manajemen Zakat Fitrah
+Pinned chat
+Rencana One-Man Agency: Eksekusi Strategis
+Pinned chat
+PTU Materi pt 5?
+Pinned chat
+Penolakan Permintaan Modifikasi Masker Kigurumi
+Pinned chat
+Project Home Server Minix
+Pinned chat
+Freelance Data Scientist Plan
+Pinned chat
+Productive Plan
+Pinned chat
+Konversi Dokumen Ujian ke Format TXT
+Deskripsi Aplikasi Lengkap dan Detail
+Format Referensi Sumber Online
+Sinkronisasi Obsidian dengan GitHub Gratis
+Git Repository Belum Diinisialisasi
+Mencari Tahu Kesukaan Bolu Secara Halus
+Pengecekan Jawaban Soal Dataset
+Meminta Riwayat Pembuatan Dataset SIMAD
+Kolaborasi Unity: Version Control & Workflow
+Ide Proyek IoT dan LLM untuk Pemerintah
+Buat logo profesional premium untuk tim teknologi pendidikan bernama DARMA-Analytics. Gaya modern corporate-tech, clean vector, minimalis namun cerdas, cocok untuk proposal nasional, dashboard AI, presentasi pemerintah, dan identitas startup akademik. Konsep Utama: Logo menggabungkan keamanan data + kecerdasan AI + peningkatan mutu pendidikan. Ikon: Gunakan perisai abstrak modern sebagai bentuk utama, sleek dan futuristik, tidak terlalu kaku. Di dalam perisai terdapat node dan garis jaringan data yang saling terhubung, melambangkan: Artificial Intelligence LLM Machine Learning Big Data Analytics Struktur ikon secara keseluruhan membentuk panah naik / upward growth arrow, simbol: peningkatan mutu pendidikan insight strategis kemajuan nasional transformasi digital Tipografi: Tulisan DARMA besar, bold, modern sans-serif, elegan, kuat. Tulisan Analytics lebih tipis, lebih kecil, clean, modern. Layout horizontal: ikon di kiri, teks di kanan. Alternatif versi stacked: ikon di atas, teks di bawah. Warna: Gunakan kombinasi premium blue palette: Deep Sapphire Blue = trust, authority, security Bright Cerulean / Cyan Blue = innovation, AI, future Optional gradient halus antar biru Style: Flat modern vector Clean lines Sharp but elegant geometry High-end tech company branding Scandinavian minimalism meets Silicon Valley AI branding Professional, terpercaya, futuristik Tidak terlalu ramai Sangat memorable Background: putih bersih versi transparent background juga Hindari: logo kartun terlalu ramai ikon generik murahan font kuno efek 3D berlebihan clipart style Kesan Akhir: Saat orang melihat logo ini harus terasa: “Tim AI profesional, terpercaya, cerdas, siap mengelola data pendidikan Indonesia.” Output: Ultra sharp vector logo, branding ready, premium quality, award-winning logo design, symmetrical balance, clean spacing, high resolution.
+coba baca history chat saya di gemini dengan nama Pembuatan Dataset SIMAD baca dari awal sampai akhir bagian saya mengirim hasil validasi model GPC
+Dataset SIMAD: Akses Percakapan Chat
+Pemetaan Mahasiswa Kelas PCD CC
+
+Settings & help
+Conversation with Gemini
+ubah ini ke format txt
+
+Your TXT file is ready.
+TXT icon
+ Evaluasi_2..._Computing 
+TXT
+
+The content of the document "Evaluasi 2 Cloud Computing" from Itenas has been converted into a structured text format, including the study case details, technical requirements for AWS (ECS, RDS, S3, CloudFront), submission outputs, and the grading rubric.
+
+
+
+
+
+Gemini is AI and can make mistakes.
+
+INSTITUT TEKNOLOGI NASIONAL
+Jalan Penghulu K.H. Mustapa 23 Telp. 7272215, Bandung-40124
+UJIAN TENGAH SEMESTER GENAP 2024/2025
+
+Mata Kuliah    : Cloud Computing
+Program Studi  : Informatika
+Dosen          : Diash Firdaus, M.T.
+Kelas          : AA - BB
+Tanggal        : 7 Mei 2026
+Waktu          : 15.00 - 13.00
+Sifat          : Take Home
+
+--------------------------------------------------------------------------------
+EVALUASI TENGAH SEMESTER 2 – CLOUD COMPUTING
+--------------------------------------------------------------------------------
+
+A. Capaian Pembelajaran
+Mahasiswa mampu mengetahui dan mengimplementasikan metode keamanan dan rekayasa jaringan menggunakan service cloud computing.
+(Note: Soal ini menggunakan AWS sebagai contoh, mahasiswa diperbolehkan menggunakan Huawei Cloud, Google Cloud, Alibaba, atau Azure).
+
+STUDI KASUS
+Anda diminta untuk mengembangkan aplikasi berbasis web berbasis cloud yang berfokus pada salah satu domain berikut:
+
+Pilihan Domain:
+1. Sistem Transportasi Kota
+2. Sistem Pelayanan Publik Desa/Kelurahan
+
+Tentukan Ide Aplikasi:
+Pilih salah satu domain, kemudian tentukan ide aplikasi.
+Contoh Ide:
+- Transportasi: Monitoring transportasi umum (semi real-time), sistem pelaporan kemacetan/kecelakaan berbasis masyarakat, rute dan jadwal.
+- Pelayanan Publik: Sistem pengajuan surat (domisili, usaha, dll), pengaduan masyarakat, tracking status layanan administrasi.
+
+Jelaskan:
+- Nama Aplikasi
+- Deskripsi Singkat
+- Target Pengguna (masyarakat, admin, atau keduanya)
+
+KETENTUAN SISTEM (WAJIB)
+Aplikasi yang dibuat wajib memenuhi:
+- Berjalan di Amazon EC2 (dapat diakses publik)
+- Menggunakan Docker dan dijalankan melalui layanan khusus Docker di AWS (WAJIB), seperti: Amazon ECS (Elastic Container Service)
+- Menggunakan Amazon RDS (database di private subnet)
+- Menggunakan Amazon S3 untuk penyimpanan file
+- Menggunakan Amazon CloudFront (CDN) untuk distribusi konten statis
+- Menggunakan GitHub Actions untuk CI/CD
+- Source code disimpan di GitHub
+
+FITUR MINIMAL APLIKASI
+- Minimal 3 fitur utama
+- Minimal 1 fitur upload file ke S3 (contoh: upload dokumen, foto laporan, dll)
+- Semua data tersimpan di RDS
+- Konten statis wajib diakses melalui CloudFront (bukan langsung dari S3)
+
+ARSITEKTUR CLOUD (WAJIB)
+Mahasiswa wajib membuat diagram arsitektur sistem dengan komponen berikut:
+- VPC
+- Public Subnet (ECS, Load Balancer / EC2 jika digunakan)
+- Private Subnet (RDS)
+- Amazon ECS (menjalankan container Docker)
+- Amazon RDS (Private Subnet)
+- Amazon S3 (file storage)
+- Amazon CloudFront (CDN di depan S3)
+- Internet Gateway
+- NAT Gateway (opsional, nilai tambah)
+- GitHub Actions (CI/CD pipeline ke ECR/ECS)
+
+Ketentuan Arsitektur (Perbedaan dari ETS):
+- Aplikasi tidak dijalankan langsung di EC2 manual, tetapi melalui container service (ECS)
+- Image Docker harus disimpan di ECR
+- Deployment dilakukan melalui pipeline CI/CD ke ECS
+- Akses file tidak boleh langsung ke S3, harus melalui CloudFront
+- EC2 hanya opsional (misalnya sebagai bastion host), bukan sebagai tempat utama aplikasi
+
+KETENTUAN PENTING
+- Aplikasi wajib dapat diakses online saat ETS2 (Senin 4 Mei 2026). Jika tidak dapat diakses -> nilai implementasi = 0.
+- Tidak menggunakan CloudFront/S3/ECS/ECR akan mengakibatkan pengurangan nilai signifikan.
+
+LARANGAN PENGGUNAAN AI
+Mahasiswa dilarang menggunakan AI (ChatGPT, Copilot, dll) untuk membuat diagram arsitektur.
+Jika terbukti menggunakan AI: Nilai = 0.
+Tools yang diperbolehkan: draw.io/diagrams.net, Lucidchart, Microsoft Visio, Figma (manual design).
+
+KETENTUAN PENULISAN LAPORAN (WAJIB)
+- Setiap gambar atau tabel wajib memiliki pengantar sebelum ditampilkan.
+- Setiap gambar atau tabel wajib memiliki penjelasan setelah ditampilkan.
+- Tidak diperbolehkan menampilkan gambar/tabel tanpa konteks.
+- Penjelasan harus relevan dengan isi gambar/tabel.
+
+OUTPUT YANG DIKUMPULKAN
+1. Laporan (PDF) berisi penjelasan sistem dan langkah pengerjaan.
+2. Diagram arsitektur (dibuat sendiri, bukan AI).
+3. Source code (GitHub link).
+4. URL aplikasi (endpoint ECS / Load Balancer / domain).
+5. Dockerfile.
+6. Workflow GitHub Actions (CI/CD ke ECR/ECS).
+
+DEADLINE
+- Pengumpulan hingga 24 April pukul 23.59.
+- Kelas AA & BB: Pengumpulan dengan membuat Folder NRP-NAMA-ETS2.
+
+--------------------------------------------------------------------------------
+RUBRIK PENILAIAN
+--------------------------------------------------------------------------------
+1. Deploy Aplikasi (Online) (10%): Berjalan stabil dan publik.
+2. Docker + ECS (15%): Menggunakan ECS dengan benar, container optimal.
+3. ECR (Docker Registry) (5%): Image tersimpan di ECR dan digunakan dalam deployment.
+4. Database (RDS) (10%): Berjalan di private subnet dan terhubung aplikasi.
+5. Storage (S3 + Upload) (10%): Upload file ke S3 berjalan baik dan terintegrasi.
+6. CDN (CloudFront) (10%): Semua static content diakses via CloudFront.
+7. CI/CD (GitHub Actions) (5%): Pipeline otomatis build & deploy ke ECS.
+8. Arsitektur Cloud (5%): Semua komponen sesuai (VPC, subnet, ECS, RDS, S3, CDN).
+Evaluasi_2_Cloud_Computing.txt
+Displaying Evaluasi_2_Cloud_Computing.txt.
