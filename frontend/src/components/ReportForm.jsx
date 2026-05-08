@@ -1,159 +1,90 @@
 import { useState } from "react";
 import api from "../services/api";
 
-const INITIAL = { title: "", description: "", location: "", report_type: "traffic_jam", submitted_by: "" };
-
-const TYPE_OPTIONS = [
-  { value: "traffic_jam", label: "🚗 Kemacetan Lalu Lintas" },
-  { value: "accident", label: "🚨 Kecelakaan" },
-  { value: "other", label: "⚠️ Lainnya" },
-];
+const INIT = { title:"", description:"", location:"", report_type:"traffic_jam", submitted_by:"" };
 
 export default function ReportForm({ onCreated }) {
-  const [form, setForm] = useState(INITIAL);
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(null);
-  const [error, setError] = useState(null);
+  const [form, setForm]   = useState(INIT);
+  const [busy, setBusy]   = useState(false);
+  const [ok,   setOk]     = useState(null);
+  const [err,  setErr]    = useState(null);
 
-  function set(field) {
-    return (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
-  }
+  const set = k => e => setForm(p => ({ ...p, [k]: e.target.value }));
 
   async function submit(e) {
     e.preventDefault();
-    setLoading(true);
-    setSuccess(null);
-    setError(null);
+    setBusy(true); setOk(null); setErr(null);
     try {
       const res = await api.post("/api/reports", form);
       onCreated(res.data);
-      setForm(INITIAL);
-      setSuccess(`Laporan #${res.data.id} berhasil dikirim! Lanjutkan dengan mengunggah foto bukti.`);
-    } catch (err) {
-      setError("Gagal mengirim laporan. Periksa koneksi dan coba lagi.");
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+      setForm(INIT);
+      setOk(`Laporan #${res.data.id} berhasil dikirim. Silakan unggah foto bukti pada tab berikutnya.`);
+    } catch {
+      setErr("Gagal mengirim laporan. Periksa koneksi ke server dan coba lagi.");
+    } finally { setBusy(false); }
   }
 
   return (
-    <section className="section">
-      <div className="section-header">
-        <div className="section-eyebrow">📢 Fitur 2</div>
-        <h2>Sistem Pelaporan <span>Kendala</span></h2>
+    <section>
+      <div className="section-head">
+        <div className="section-tag">Fitur 2 — Pelaporan</div>
+        <div className="section-title">Kirim Laporan Kendala</div>
         <p className="section-desc">
-          Laporkan kemacetan, kecelakaan, atau kerusakan fasilitas transportasi kepada Dishub Kota Bandung.
+          Laporkan kemacetan, kecelakaan, atau kerusakan fasilitas transportasi kepada Dinas Perhubungan Kota Bandung.
         </p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 24, alignItems: "start" }}>
-        <div className="form-card">
-          {success && (
-            <div className="alert alert-success" role="alert">
-              ✅ {success}
-            </div>
-          )}
-          {error && (
-            <div className="alert alert-error" role="alert">
-              ❌ {error}
-            </div>
-          )}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 320px", gap:20, alignItems:"start" }}>
+        <div className="form-block">
+          {ok  && <div className="alert alert-ok">{ok}</div>}
+          {err && <div className="alert alert-err">{err}</div>}
 
           <form id="report-form" onSubmit={submit}>
-            <div className="form-grid">
-              <div className="form-group">
-                <label className="form-label" htmlFor="report-title">Judul Laporan *</label>
-                <input
-                  id="report-title"
-                  className="form-input"
-                  placeholder="Contoh: Kemacetan parah di Jl. Asia Afrika"
-                  value={form.title}
-                  onChange={set("title")}
-                  required
-                />
+            <div className="form-row" style={{ marginBottom:14 }}>
+              <div className="form-col">
+                <label htmlFor="f-title">Judul laporan</label>
+                <input id="f-title" placeholder="Contoh: Kemacetan di Jl. Asia Afrika" value={form.title} onChange={set("title")} required />
               </div>
-
-              <div className="form-group">
-                <label className="form-label" htmlFor="report-type">Jenis Kejadian *</label>
-                <select
-                  id="report-type"
-                  className="form-select"
-                  value={form.report_type}
-                  onChange={set("report_type")}
-                >
-                  {TYPE_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
+              <div className="form-col">
+                <label htmlFor="f-type">Jenis kejadian</label>
+                <select id="f-type" value={form.report_type} onChange={set("report_type")}>
+                  <option value="traffic_jam">Kemacetan</option>
+                  <option value="accident">Kecelakaan</option>
+                  <option value="other">Lainnya</option>
                 </select>
               </div>
-
-              <div className="form-group">
-                <label className="form-label" htmlFor="report-location">Lokasi Kejadian *</label>
-                <input
-                  id="report-location"
-                  className="form-input"
-                  placeholder="Nama jalan / persimpangan"
-                  value={form.location}
-                  onChange={set("location")}
-                  required
-                />
+              <div className="form-col">
+                <label htmlFor="f-loc">Lokasi kejadian</label>
+                <input id="f-loc" placeholder="Nama jalan atau persimpangan" value={form.location} onChange={set("location")} required />
               </div>
-
-              <div className="form-group">
-                <label className="form-label" htmlFor="report-submitter">Nama Pelapor *</label>
-                <input
-                  id="report-submitter"
-                  className="form-input"
-                  placeholder="Nama Anda"
-                  value={form.submitted_by}
-                  onChange={set("submitted_by")}
-                  required
-                />
+              <div className="form-col">
+                <label htmlFor="f-by">Nama pelapor</label>
+                <input id="f-by" placeholder="Nama lengkap Anda" value={form.submitted_by} onChange={set("submitted_by")} required />
               </div>
-
-              <div className="form-group full">
-                <label className="form-label" htmlFor="report-desc">Deskripsi Lengkap *</label>
-                <textarea
-                  id="report-desc"
-                  className="form-textarea"
-                  placeholder="Deskripsikan situasi secara detail — kondisi jalan, estimasi panjang antrian, korban jika ada, dll."
-                  value={form.description}
-                  onChange={set("description")}
-                  required
-                />
-              </div>
-
-              <div className="form-group full">
-                <button id="submit-report" className="btn btn-primary btn-full" type="submit" disabled={loading}>
-                  {loading ? <><div className="spinner" /> Mengirim...</> : "📤 Kirim Laporan"}
-                </button>
+              <div className="form-col span2">
+                <label htmlFor="f-desc">Deskripsi</label>
+                <textarea id="f-desc" placeholder="Deskripsikan situasi secara detail — kondisi, perkiraan panjang antrian, dan informasi penting lainnya." value={form.description} onChange={set("description")} required />
               </div>
             </div>
+            <button id="btn-submit-report" className="btn btn-primary btn-full btn-lg" type="submit" disabled={busy}>
+              {busy ? <><div className="spin" /> Mengirim...</> : "Kirim Laporan"}
+            </button>
           </form>
         </div>
 
-        {/* Info sidebar */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {/* Sidebar */}
+        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
           {[
-            { icon: "🔒", title: "Data Aman", desc: "Laporan Anda disimpan di Amazon RDS yang terlindungi dalam Private Subnet." },
-            { icon: "⚡", title: "Proses Cepat", desc: "Tim Dishub akan memverifikasi laporan dalam waktu singkat." },
-            { icon: "📷", title: "Upload Bukti", desc: "Setelah laporan terkirim, Anda dapat melampirkan foto melalui tab Upload Bukti." },
-          ].map((item) => (
-            <div className="card" key={item.title} style={{ padding: "16px 18px" }}>
-              <div style={{ fontSize: "1.4rem", marginBottom: 6 }}>{item.icon}</div>
-              <div style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: 4 }}>{item.title}</div>
-              <div style={{ fontSize: "0.82rem", color: "var(--text-muted)", lineHeight: 1.5 }}>{item.desc}</div>
+            { title:"Data tersimpan aman",   body:"Laporan disimpan di Amazon RDS dalam Private Subnet, terisolasi dari akses publik." },
+            { title:"Diproses oleh Dishub",  body:"Tim Dinas Perhubungan akan memverifikasi laporan dan mengambil tindakan yang diperlukan." },
+            { title:"Lampirkan foto bukti",  body:"Setelah laporan terkirim, Anda akan diarahkan untuk mengunggah foto melalui Amazon S3." },
+          ].map(item => (
+            <div key={item.title} className="card card-p" style={{ borderRadius:"var(--r-lg)" }}>
+              <div style={{ fontWeight:600, fontSize:"0.85rem", marginBottom:5 }}>{item.title}</div>
+              <div style={{ fontSize:"0.78rem", color:"var(--text-3)", lineHeight:1.55 }}>{item.body}</div>
             </div>
           ))}
         </div>
-      </div>
-
-      {/* Recent reports preview */}
-      <div style={{ marginTop: 32 }}>
-        <h3 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: "1rem", color: "var(--text-secondary)", marginBottom: 12, fontWeight: 600 }}>
-          Laporan terbaru akan tampil di tab Monitoring Admin setelah terverifikasi.
-        </h3>
       </div>
     </section>
   );

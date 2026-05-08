@@ -1,110 +1,87 @@
 import { useState } from "react";
 import api from "../services/api";
 
-const TYPE_MAP = { traffic_jam: "Kemacetan", accident: "Kecelakaan", other: "Lainnya" };
-const STATUS_CONFIG = {
-  pending: { label: "Menunggu", cls: "badge-pending", icon: "⏳" },
-  verified: { label: "Terverifikasi", cls: "badge-verified", icon: "✅" },
-  resolved: { label: "Selesai", cls: "badge-resolved", icon: "🟢" },
-  dismissed: { label: "Ditolak", cls: "badge-dismissed", icon: "❌" },
+const TYPE = { traffic_jam:"Kemacetan", accident:"Kecelakaan", other:"Lainnya" };
+const ST = {
+  pending:   { label:"Menunggu",      cls:"badge-pending" },
+  verified:  { label:"Terverifikasi", cls:"badge-verified" },
+  resolved:  { label:"Selesai",       cls:"badge-resolved" },
+  dismissed: { label:"Ditolak",       cls:"badge-dismissed" },
 };
+const TYPE_CLS = { traffic_jam:"badge-jam", accident:"badge-accident", other:"badge-other" };
 
-function formatDate(str) {
-  if (!str) return "-";
-  return new Date(str).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+function fmtDate(s) {
+  if (!s) return "—";
+  return new Date(s).toLocaleDateString("id-ID", { day:"numeric", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit" });
 }
 
 function ReportCard({ report, token, onStatusUpdated }) {
-  const [loading, setLoading] = useState(null);
-  const [expanded, setExpanded] = useState(false);
-  const statusCfg = STATUS_CONFIG[report.status] || STATUS_CONFIG.pending;
+  const [busy, setBusy] = useState(null);
+  const cfg = ST[report.status] || ST.pending;
+  const photos = report.evidence_files?.filter(e => e.cloudfront_url) || [];
 
-  async function changeStatus(status) {
-    if (!token) { alert("Masukkan Admin Token terlebih dahulu."); return; }
-    setLoading(status);
+  async function change(status) {
+    if (!token) { alert("Masukkan Admin Token."); return; }
+    setBusy(status);
     try {
       const res = await api.patch(
         `/api/admin/reports/${report.id}/status`,
-        { status, admin_notes: `Status diubah ke ${status} oleh admin.` },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { status, admin_notes:`Status diubah ke ${status}.` },
+        { headers:{ Authorization:`Bearer ${token}` } }
       );
       onStatusUpdated(res.data);
-    } catch (e) {
-      alert("Gagal mengubah status. Periksa token admin Anda.");
-    } finally {
-      setLoading(null);
-    }
+    } catch {
+      alert("Gagal mengubah status. Periksa token admin.");
+    } finally { setBusy(null); }
   }
 
-  const evidenceCount = report.evidence_files?.filter((e) => e.cloudfront_url)?.length || 0;
-
   return (
-    <div className="report-card" id={`admin-report-${report.id}`}>
-      <div className="report-meta">
-        <span className="report-id">#{report.id} · {formatDate(report.created_at)}</span>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <span className={`badge ${report.report_type === "traffic_jam" ? "type-traffic_jam" : report.report_type === "accident" ? "type-accident" : "type-other"} report-type-badge`}>
-            {TYPE_MAP[report.report_type] || report.report_type}
+    <div className="rcard" id={`rcard-${report.id}`}>
+      <div className="rcard-top">
+        <span className="rcard-id">#{report.id} · {fmtDate(report.created_at)}</span>
+        <div style={{ display:"flex", gap:6 }}>
+          <span className={`badge ${TYPE_CLS[report.report_type] || "badge-other"}`}>
+            {TYPE[report.report_type] || report.report_type}
           </span>
-          <span className={`badge ${statusCfg.cls}`}>
-            <span className="badge-dot" />
-            {statusCfg.label}
-          </span>
+          <span className={`badge ${cfg.cls}`}>{cfg.label}</span>
         </div>
       </div>
 
-      <div className="report-title">{report.title}</div>
-      <div className="report-desc" style={{ WebkitLineClamp: expanded ? "unset" : 2, display: "-webkit-box", WebkitBoxOrient: "vertical", overflow: expanded ? "visible" : "hidden" }}>
-        {report.description}
-      </div>
-      {report.description?.length > 100 && (
-        <button onClick={() => setExpanded(!expanded)} style={{ background: "none", border: "none", color: "var(--accent-blue)", fontSize: "0.78rem", cursor: "pointer", padding: "2px 0", fontFamily: "inherit" }}>
-          {expanded ? "Tampilkan lebih sedikit" : "Selengkapnya"}
-        </button>
-      )}
+      <div className="rcard-title">{report.title}</div>
+      <div className="rcard-desc">{report.description}</div>
 
-      <div className="report-footer" style={{ marginTop: 10 }}>
-        <span className="report-footer-item">📍 {report.location}</span>
-        <span className="report-footer-item">👤 {report.submitted_by}</span>
-        {evidenceCount > 0 && <span className="report-footer-item">🖼️ {evidenceCount} foto</span>}
+      <div className="rcard-meta">
+        <span>{report.location}</span>
+        <span>{report.submitted_by}</span>
+        {photos.length > 0 && <span>{photos.length} foto</span>}
       </div>
 
-      {/* Evidence thumbnails */}
-      {evidenceCount > 0 && (
-        <div className="evidence-grid">
-          {report.evidence_files
-            .filter((e) => e.cloudfront_url)
-            .map((e) => (
-              <a key={e.id} href={e.cloudfront_url} target="_blank" rel="noreferrer">
-                <img
-                  src={e.cloudfront_url}
-                  alt="Bukti laporan"
-                  className="evidence-thumb"
-                  loading="lazy"
-                />
-              </a>
-            ))}
+      {photos.length > 0 && (
+        <div className="ev-grid">
+          {photos.map(ev => (
+            <a key={ev.id} href={ev.cloudfront_url} target="_blank" rel="noreferrer">
+              <img src={ev.cloudfront_url} alt="Bukti laporan" className="ev-thumb" loading="lazy" />
+            </a>
+          ))}
         </div>
       )}
 
-      {report.admin_notes && (
-        <div className="admin-notes">💬 {report.admin_notes}</div>
-      )}
+      {report.admin_notes && <div className="rcard-note">{report.admin_notes}</div>}
 
-      <div className="admin-actions">
+      <div className="rcard-actions">
         {report.status !== "verified" && (
-          <button id={`verify-${report.id}`} className="btn btn-sm btn-success" onClick={() => changeStatus("verified")} disabled={!!loading}>
-            {loading === "verified" ? <div className="spinner" /> : "✅"} Verifikasi
+          <button id={`btn-verify-${report.id}`} className="btn btn-sm btn-green" onClick={() => change("verified")} disabled={!!busy}>
+            {busy==="verified" ? <div className="spin"/> : null} Verifikasi
           </button>
         )}
         {report.status !== "resolved" && (
-          <button id={`resolve-${report.id}`} className="btn btn-sm btn-outline" onClick={() => changeStatus("resolved")} disabled={!!loading}>
-            {loading === "resolved" ? <div className="spinner" /> : "🟢"} Selesai
+          <button id={`btn-resolve-${report.id}`} className="btn btn-sm btn-ghost" onClick={() => change("resolved")} disabled={!!busy}>
+            {busy==="resolved" ? <div className="spin"/> : null} Selesai
           </button>
         )}
         {report.status !== "dismissed" && (
-          <button id={`dismiss-${report.id}`} className="btn btn-sm btn-danger" onClick={() => changeStatus("dismissed")} disabled={!!loading}>
-            {loading === "dismissed" ? <div className="spinner" /> : "❌"} Tolak
+          <button id={`btn-dismiss-${report.id}`} className="btn btn-sm btn-red" onClick={() => change("dismissed")} disabled={!!busy}>
+            {busy==="dismissed" ? <div className="spin"/> : null} Tolak
           </button>
         )}
       </div>
@@ -112,116 +89,98 @@ function ReportCard({ report, token, onStatusUpdated }) {
   );
 }
 
-const FILTERS = ["all", "pending", "verified", "resolved", "dismissed"];
-const FILTER_LABELS = { all: "Semua", pending: "Menunggu", verified: "Terverifikasi", resolved: "Selesai", dismissed: "Ditolak" };
+const FILTERS = ["all","pending","verified","resolved","dismissed"];
+const F_LABELS = { all:"Semua", pending:"Menunggu", verified:"Terverifikasi", resolved:"Selesai", dismissed:"Ditolak" };
 
 export default function AdminDashboard({ reports, onStatusUpdated }) {
-  const [token, setToken] = useState("");
+  const [token,  setToken]  = useState("");
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
 
-  const filtered = reports
-    .filter((r) => filter === "all" || r.status === filter)
-    .filter((r) =>
-      !search ||
-      r.title?.toLowerCase().includes(search.toLowerCase()) ||
-      r.location?.toLowerCase().includes(search.toLowerCase()) ||
-      r.submitted_by?.toLowerCase().includes(search.toLowerCase())
-    );
+  const count = s => reports.filter(r => r.status === s).length;
 
-  const countByStatus = (s) => reports.filter((r) => r.status === s).length;
+  const list = reports
+    .filter(r => filter === "all" || r.status === filter)
+    .filter(r => {
+      if (!search) return true;
+      const q = search.toLowerCase();
+      return r.title?.toLowerCase().includes(q) || r.location?.toLowerCase().includes(q) || r.submitted_by?.toLowerCase().includes(q);
+    });
 
   return (
-    <section className="section">
-      <div className="section-header">
-        <div className="section-eyebrow">🛡️ Fitur 3</div>
-        <h2>Dashboard <span>Validasi Admin</span></h2>
+    <section>
+      <div className="section-head">
+        <div className="section-tag">Fitur 3 — Admin</div>
+        <div className="section-title">Dashboard Validasi</div>
         <p className="section-desc">
-          Kelola, verifikasi, dan tinjau semua laporan masyarakat. Foto bukti dimuat melalui Cloudflare CDN.
+          Tinjau, verifikasi, dan kelola semua laporan masyarakat. Foto bukti dimuat melalui Cloudflare CDN.
         </p>
       </div>
 
-      {/* Stats bar */}
-      <div className="grid-4" style={{ marginBottom: 28 }}>
+      {/* Stats */}
+      <div className="grid-stats" style={{ marginBottom:24 }}>
         {[
-          { label: "Total Laporan", value: reports.length, icon: "📊", color: "var(--accent-blue)" },
-          { label: "Menunggu", value: countByStatus("pending"), icon: "⏳", color: "var(--accent-yellow)" },
-          { label: "Terverifikasi", value: countByStatus("verified"), icon: "✅", color: "var(--accent-cyan)" },
-          { label: "Selesai", value: countByStatus("resolved"), icon: "🟢", color: "var(--accent-green)" },
-        ].map((s) => (
-          <div className="card" key={s.label} style={{ padding: "16px 18px" }}>
-            <div style={{ fontSize: "1.4rem", marginBottom: 6 }}>{s.icon}</div>
-            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: "1.6rem", fontWeight: 800, color: s.color }}>{s.value}</div>
-            <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: 2 }}>{s.label}</div>
+          { label:"Total Laporan",  value: reports.length, color:"var(--text-1)" },
+          { label:"Menunggu",       value: count("pending"),   color:"var(--yellow)" },
+          { label:"Terverifikasi",  value: count("verified"),  color:"var(--blue)" },
+          { label:"Selesai",        value: count("resolved"),  color:"var(--green)" },
+        ].map(s => (
+          <div className="stat-card" key={s.label}>
+            <div className="stat-card-n" style={{ color:s.color }}>{s.value}</div>
+            <div className="stat-card-l">{s.label}</div>
           </div>
         ))}
       </div>
 
-      {/* Token input */}
-      <div className="token-bar">
-        <span className="token-icon">🔑</span>
+      {/* Token */}
+      <div className="token-row">
         <span className="token-label">Admin Token</span>
         <input
           id="admin-token"
           type="password"
-          className="form-input"
-          placeholder="Masukkan Bearer token untuk mengubah status laporan..."
+          placeholder="Masukkan token untuk mengubah status laporan"
           value={token}
-          onChange={(e) => setToken(e.target.value)}
-          style={{ flex: 1 }}
+          onChange={e => setToken(e.target.value)}
+          style={{ flex:1, minWidth:0 }}
         />
       </div>
 
-      {/* Search & Filter */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap", alignItems: "center" }}>
+      {/* Filter + search */}
+      <div className="filter-row">
         <input
           id="admin-search"
-          className="form-input"
-          placeholder="🔍 Cari laporan..."
+          className="search-input"
+          placeholder="Cari laporan..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ flex: 1, minWidth: 200 }}
+          onChange={e => setSearch(e.target.value)}
         />
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {FILTERS.map((f) => (
-            <button
-              key={f}
-              id={`filter-${f}`}
-              className={`btn btn-sm ${filter === f ? "btn-primary" : "btn-outline"}`}
-              onClick={() => setFilter(f)}
-            >
-              {FILTER_LABELS[f]}
-              {f !== "all" && countByStatus(f) > 0 && (
-                <span style={{
-                  background: "rgba(255,255,255,0.2)", borderRadius: "100px",
-                  padding: "1px 6px", fontSize: "0.7rem", marginLeft: 4,
-                }}>
-                  {countByStatus(f)}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+        {FILTERS.map(f => (
+          <button
+            key={f}
+            id={`filter-${f}`}
+            className={`btn btn-sm ${filter===f ? "btn-primary":"btn-ghost"}`}
+            onClick={() => setFilter(f)}
+          >
+            {F_LABELS[f]}
+            {f !== "all" && count(f) > 0 && (
+              <span style={{ marginLeft:5, opacity:0.7, fontWeight:500 }}>{count(f)}</span>
+            )}
+          </button>
+        ))}
       </div>
 
-      {/* Report list */}
-      {filtered.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-icon">{filter === "all" ? "📋" : STATUS_CONFIG[filter]?.icon}</div>
-          <p style={{ fontWeight: 600, color: "var(--text-secondary)", marginBottom: 6 }}>
-            {search ? "Tidak ada laporan yang cocok" : `Belum ada laporan${filter !== "all" ? ` berstatus "${FILTER_LABELS[filter]}"` : ""}`}
-          </p>
-          <p>Laporan dari masyarakat akan muncul di sini setelah terkirim.</p>
+      {/* List */}
+      {list.length === 0 ? (
+        <div className="empty">
+          <div className="empty-title">
+            {search ? "Tidak ada laporan yang cocok" : `Tidak ada laporan${filter!=="all" ? ` berstatus "${F_LABELS[filter]}"` : ""}`}
+          </div>
+          <div className="empty-sub">Laporan masyarakat akan muncul di sini setelah terkirim.</div>
         </div>
       ) : (
         <div className="grid-2">
-          {filtered.map((report) => (
-            <ReportCard
-              key={report.id}
-              report={report}
-              token={token}
-              onStatusUpdated={onStatusUpdated}
-            />
+          {list.map(r => (
+            <ReportCard key={r.id} report={r} token={token} onStatusUpdated={onStatusUpdated} />
           ))}
         </div>
       )}

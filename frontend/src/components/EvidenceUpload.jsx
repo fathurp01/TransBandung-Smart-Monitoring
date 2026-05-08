@@ -1,207 +1,121 @@
 import { useState } from "react";
 import { uploadEvidence } from "../services/upload";
 
-function formatBytes(bytes) {
-  if (!bytes) return "";
-  if (bytes < 1024) return bytes + " B";
-  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
-  return (bytes / 1048576).toFixed(1) + " MB";
-}
+const fmt = b => b < 1048576 ? (b/1024).toFixed(1)+" KB" : (b/1048576).toFixed(1)+" MB";
 
 export default function EvidenceUpload({ reports, onUploaded }) {
-  const [reportId, setReportId] = useState("");
+  const [rid,  setRid]  = useState("");
   const [file, setFile] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [success, setSuccess] = useState(null);
-  const [error, setError] = useState(null);
-  const [dragging, setDragging] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [pct,  setPct]  = useState(0);
+  const [ok,   setOk]   = useState(null);
+  const [err,  setErr]  = useState(null);
+  const [over, setOver] = useState(false);
 
-  function handleFile(f) {
-    if (!f) return;
-    setFile(f);
-    setSuccess(null);
-    setError(null);
-  }
+  function pick(f) { if (f) { setFile(f); setOk(null); setErr(null); } }
 
   async function submit(e) {
     e.preventDefault();
-    if (!reportId || !file) return;
-    setLoading(true);
-    setProgress(10);
-    setSuccess(null);
-    setError(null);
+    if (!rid || !file) return;
+    setBusy(true); setPct(20); setOk(null); setErr(null);
     try {
-      setProgress(30);
-      const url = await uploadEvidence(Number(reportId), file);
-      setProgress(100);
-      onUploaded(Number(reportId), url);
-      setSuccess("✅ Foto bukti berhasil diunggah ke Amazon S3 dan dapat diakses melalui Cloudflare CDN.");
-      setFile(null);
-      setReportId("");
-    } catch (err) {
-      setError("❌ Upload gagal. Periksa koneksi dan coba lagi.");
-      console.error(err);
+      setPct(50);
+      const url = await uploadEvidence(Number(rid), file);
+      setPct(100);
+      onUploaded(Number(rid), url);
+      setOk("File berhasil diunggah ke Amazon S3 dan dapat diakses melalui Cloudflare CDN.");
+      setFile(null); setRid("");
+    } catch {
+      setErr("Upload gagal. Periksa koneksi dan coba lagi.");
     } finally {
-      setLoading(false);
-      setTimeout(() => setProgress(0), 1200);
+      setBusy(false);
+      setTimeout(() => setPct(0), 1000);
     }
   }
 
-  const selectedReport = reports.find((r) => r.id === Number(reportId));
+  const sel = reports.find(r => r.id === Number(rid));
 
   return (
-    <section className="section">
-      <div className="section-header">
-        <div className="section-eyebrow">📎 Fitur S3</div>
-        <h2>Upload Bukti <span>Foto</span></h2>
+    <section>
+      <div className="section-head">
+        <div className="section-tag">Fitur S3 — Upload</div>
+        <div className="section-title">Upload Foto Bukti</div>
         <p className="section-desc">
-          Lampirkan foto kejadian untuk memperkuat laporan. File diunggah langsung ke Amazon S3
-          melalui Presigned URL, lalu didistribusikan via Cloudflare CDN.
+          Lampirkan foto kejadian untuk mendukung laporan. File diunggah ke Amazon S3 via Presigned URL dan diakses melalui Cloudflare CDN.
         </p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, alignItems: "start" }}>
-        <div className="form-card">
-          {success && <div className="alert alert-success">{success}</div>}
-          {error && <div className="alert alert-error">{error}</div>}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 300px", gap:20, alignItems:"start" }}>
+        <div className="form-block">
+          {ok  && <div className="alert alert-ok">{ok}</div>}
+          {err && <div className="alert alert-err">{err}</div>}
 
           <form id="evidence-form" onSubmit={submit}>
-            <div className="form-group" style={{ marginBottom: 20 }}>
-              <label className="form-label" htmlFor="evidence-report">Pilih Laporan *</label>
-              <select
-                id="evidence-report"
-                className="form-select"
-                value={reportId}
-                onChange={(e) => setReportId(e.target.value)}
-                required
-              >
-                <option value="">— Pilih laporan yang telah dikirim —</option>
-                {reports.map((r) => (
+            <div className="form-col" style={{ marginBottom:14 }}>
+              <label htmlFor="ev-report">Pilih laporan</label>
+              <select id="ev-report" value={rid} onChange={e => setRid(e.target.value)} required>
+                <option value="">— Pilih laporan —</option>
+                {reports.map(r => (
                   <option key={r.id} value={r.id}>
-                    #{r.id} · {r.title} ({r.report_type === "traffic_jam" ? "Kemacetan" : r.report_type === "accident" ? "Kecelakaan" : "Lainnya"})
+                    #{r.id} — {r.title}
                   </option>
                 ))}
               </select>
             </div>
 
-            {selectedReport && (
-              <div style={{
-                background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.2)",
-                borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: "0.82rem",
-              }}>
-                <span style={{ color: "var(--text-muted)" }}>Lokasi: </span>
-                <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>{selectedReport.location}</span>
-                <span style={{ marginLeft: 12, color: "var(--text-muted)" }}>Status: </span>
-                <span style={{ color: "var(--accent-yellow)", fontWeight: 600, textTransform: "capitalize" }}>{selectedReport.status}</span>
+            {sel && (
+              <div style={{ padding:"8px 12px", background:"var(--bg-3)", borderRadius:"var(--r-sm)", marginBottom:14, fontSize:"0.78rem", color:"var(--text-2)" }}>
+                Lokasi: <strong style={{ color:"var(--text-1)" }}>{sel.location}</strong>
+                &ensp;|&ensp;Status: <strong style={{ color:"var(--yellow)" }}>{sel.status}</strong>
               </div>
             )}
 
-            <div className="form-group" style={{ marginBottom: 20 }}>
-              <label className="form-label">File Gambar *</label>
+            <div className="form-col" style={{ marginBottom:14 }}>
+              <label>File gambar</label>
               <div
-                id="file-drop-zone"
-                className={`file-drop ${dragging ? "dragging" : ""}`}
-                onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-                onDragLeave={() => setDragging(false)}
-                onDrop={(e) => { e.preventDefault(); setDragging(false); handleFile(e.dataTransfer.files[0]); }}
+                id="drop-zone"
+                className={`drop-zone ${over ? "over":""}`}
+                onDragOver={e => { e.preventDefault(); setOver(true); }}
+                onDragLeave={() => setOver(false)}
+                onDrop={e => { e.preventDefault(); setOver(false); pick(e.dataTransfer.files[0]); }}
               >
-                <input
-                  id="evidence-file"
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={(e) => handleFile(e.target.files?.[0] || null)}
-                />
-                <div className="file-drop-icon">🖼️</div>
-                <div className="file-drop-text">
-                  <span>Klik untuk memilih</span> atau seret gambar ke sini
-                </div>
-                <div className="file-drop-hint">JPG, PNG, WebP — maks. 10 MB</div>
+                <input id="ev-file" type="file" accept="image/jpeg,image/png,image/webp" onChange={e => pick(e.target.files?.[0])} />
+                <div className="drop-title"><span>Klik untuk memilih</span> atau seret gambar ke sini</div>
+                <div className="drop-hint">JPG, PNG, WebP — maks. 10 MB</div>
               </div>
-
               {file && (
-                <div className="file-preview">
-                  <span>📄</span>
-                  <span className="file-preview-name">{file.name}</span>
-                  <span className="file-preview-size">{formatBytes(file.size)}</span>
-                  <button
-                    type="button"
-                    onClick={() => setFile(null)}
-                    style={{ background: "none", border: "none", color: "var(--accent-red)", cursor: "pointer", fontSize: "1rem" }}
-                  >
-                    ✕
-                  </button>
+                <div className="file-row">
+                  <span className="file-name">{file.name}</span>
+                  <span className="file-size">{fmt(file.size)}</span>
+                  <button type="button" onClick={() => setFile(null)} style={{ background:"none", border:"none", color:"var(--text-3)", cursor:"pointer", lineHeight:1, fontSize:"0.9rem" }}>✕</button>
                 </div>
               )}
-
-              {loading && (
-                <div className="upload-progress">
-                  <div className="upload-progress-bar" style={{ width: `${progress}%` }} />
-                </div>
-              )}
+              {busy && <div className="prog-wrap"><div className="prog-bar" style={{ width:`${pct}%` }} /></div>}
             </div>
 
-            <button id="submit-upload" className="btn btn-primary btn-full" type="submit" disabled={loading || !file || !reportId}>
-              {loading ? <><div className="spinner" /> Mengunggah ke S3...</> : "☁️ Upload ke Amazon S3"}
+            <button id="btn-upload" className="btn btn-primary btn-full btn-lg" type="submit" disabled={busy || !file || !rid}>
+              {busy ? <><div className="spin" /> Mengunggah ke S3...</> : "Upload ke Amazon S3"}
             </button>
           </form>
         </div>
 
-        {/* Flow explanation */}
-        <div>
-          <div className="form-card" style={{ padding: "24px" }}>
-            <h3 style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, marginBottom: 20, fontSize: "1rem" }}>
-              Alur Upload Bukti
-            </h3>
-            {[
-              { step: "1", icon: "🔐", title: "Presigned URL", desc: "Backend men-generate URL upload sementara dari Amazon S3 yang berlaku 15 menit." },
-              { step: "2", icon: "☁️", title: "Direct Upload ke S3", desc: "File diunggah langsung dari browser ke bucket S3 tanpa melalui server backend." },
-              { step: "3", icon: "🌐", title: "Cloudflare CDN", desc: "Setelah tersimpan, foto diakses melalui cdn.tbsm.my.id — lebih cepat dan aman." },
-              { step: "4", icon: "✅", title: "Konfirmasi", desc: "Backend mencatat URL CDN ke database RDS untuk tampil di dashboard Admin." },
-            ].map((item) => (
-              <div key={item.step} style={{ display: "flex", gap: 14, marginBottom: 16, alignItems: "flex-start" }}>
-                <div style={{
-                  width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
-                  background: "var(--gradient-accent)", display: "flex",
-                  alignItems: "center", justifyContent: "center",
-                  fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: "0.8rem",
-                }}>
-                  {item.step}
-                </div>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: "0.88rem", marginBottom: 3 }}>
-                    {item.icon} {item.title}
-                  </div>
-                  <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", lineHeight: 1.5 }}>{item.desc}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {reports.length > 0 && (
-            <div className="form-card" style={{ padding: "18px 20px", marginTop: 16 }}>
-              <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.1em", marginBottom: 10 }}>
-                LAPORAN TERSEDIA
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {reports.slice(0, 5).map((r) => (
-                  <div
-                    key={r.id}
-                    onClick={() => setReportId(String(r.id))}
-                    style={{
-                      padding: "8px 12px", borderRadius: 8, cursor: "pointer",
-                      background: reportId === String(r.id) ? "rgba(59,130,246,0.12)" : "rgba(255,255,255,0.03)",
-                      border: `1px solid ${reportId === String(r.id) ? "rgba(59,130,246,0.3)" : "var(--border)"}`,
-                      fontSize: "0.82rem", transition: "all 0.15s",
-                    }}
-                  >
-                    <span style={{ color: "var(--text-muted)" }}>#{r.id}</span>{" "}
-                    <span style={{ fontWeight: 600 }}>{r.title}</span>
-                  </div>
-                ))}
+        {/* Flow panel */}
+        <div className="form-block" style={{ padding:"20px" }}>
+          <div style={{ fontWeight:600, fontSize:"0.88rem", marginBottom:16 }}>Alur Upload</div>
+          {[
+            ["1","Presigned URL","Backend men-generate URL upload sementara dari S3 yang berlaku 15 menit."],
+            ["2","Direct Upload","File diunggah langsung dari browser ke S3 tanpa melalui server backend."],
+            ["3","Cloudflare CDN","Foto diakses melalui cdn.tbsm.my.id — lebih cepat dan aman."],
+            ["4","Konfirmasi","URL CDN dicatat ke RDS dan tampil di dashboard Admin."],
+          ].map(([n, t, d]) => (
+            <div key={n} style={{ display:"flex", gap:12, marginBottom:14 }}>
+              <div style={{ width:24, height:24, borderRadius:"50%", background:"var(--blue)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"0.7rem", fontWeight:700, color:"#fff", flexShrink:0 }}>{n}</div>
+              <div>
+                <div style={{ fontWeight:600, fontSize:"0.82rem", marginBottom:2 }}>{t}</div>
+                <div style={{ fontSize:"0.76rem", color:"var(--text-3)", lineHeight:1.5 }}>{d}</div>
               </div>
             </div>
-          )}
+          ))}
         </div>
       </div>
     </section>
