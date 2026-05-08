@@ -20,3 +20,5 @@ frontend/dist/
 .DS_Store
 Thumbs.db
 infrastructure/.terraform/
+ketentuan_uts.txt
+progress_pengerjaan.txt
